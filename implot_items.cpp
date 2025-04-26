@@ -2540,7 +2540,7 @@ CALL_INSTANTIATE_FOR_NUMERIC_TYPES()
 //-----------------------------------------------------------------------------
 
 template <typename T>
-double PlotHistogram(const char* label_id, const T* values, int count, int bins, double bar_scale, ImPlotRange range, ImPlotHistogramFlags flags) {
+double PlotHistogram(const char* label_id, const T* values, int count, int stride, int bins, double bar_scale, ImPlotRange range, ImPlotHistogramFlags flags) {
 
     const bool cumulative = ImHasFlag(flags, ImPlotHistogramFlags_Cumulative);
     const bool density    = ImHasFlag(flags, ImPlotHistogramFlags_Density);
@@ -2551,14 +2551,14 @@ double PlotHistogram(const char* label_id, const T* values, int count, int bins,
 
     if (range.Min == 0 && range.Max == 0) {
         T Min, Max;
-        ImMinMaxArray(values, count, &Min, &Max);
+        ImMinMaxArray(values, count, &Min, &Max, stride);
         range.Min = (double)Min;
         range.Max = (double)Max;
     }
 
     double width;
     if (bins < 0)
-        CalculateBins(values, count, bins, range, bins, width);
+        CalculateBins(values, count, bins, range, bins, width, stride);
     else
         width = range.Size() / bins;
 
@@ -2575,7 +2575,7 @@ double PlotHistogram(const char* label_id, const T* values, int count, int bins,
     }
     int counted = 0;
     double max_count = 0;
-    for (int i = 0; i < count; ++i) {
+    for (int i = 0; i < count; i += stride) {
         double val = (double)values[i];
         if (range.Contains(val)) {
             const int b = ImClamp((int)((val - range.Min) / width), 0, bins - 1);
@@ -2593,7 +2593,7 @@ double PlotHistogram(const char* label_id, const T* values, int count, int bins,
             bin_counts[0] += below;
         for (int b = 1; b < bins; ++b)
             bin_counts[b] += bin_counts[b-1];
-        double scale = 1.0 / (outliers ? count : counted);
+        double scale = 1.0 / (outliers ? count/stride : counted);
         for (int b = 0; b < bins; ++b)
             bin_counts[b] *= scale;
         max_count = bin_counts[bins-1];
@@ -2606,7 +2606,7 @@ double PlotHistogram(const char* label_id, const T* values, int count, int bins,
         max_count = bin_counts[bins-1];
     }
     else if (density) {
-        double scale = 1.0 / ((outliers ? count : counted) * width);
+        double scale = 1.0 / ((outliers ? count/stride : counted) * width);
         for (int b = 0; b < bins; ++b)
             bin_counts[b] *= scale;
         max_count *= scale;
@@ -2617,7 +2617,7 @@ double PlotHistogram(const char* label_id, const T* values, int count, int bins,
         PlotBars(label_id, &bin_centers.Data[0], &bin_counts.Data[0], bins, bar_scale*width);
     return max_count;
 }
-#define INSTANTIATE_MACRO(T) template IMPLOT_API double PlotHistogram<T>(const char* label_id, const T* values, int count, int bins, double bar_scale, ImPlotRange range, ImPlotHistogramFlags flags);
+#define INSTANTIATE_MACRO(T) template IMPLOT_API double PlotHistogram<T>(const char* label_id, const T* values, int count, int stride, int bins, double bar_scale, ImPlotRange range, ImPlotHistogramFlags flags);
 CALL_INSTANTIATE_FOR_NUMERIC_TYPES()
 #undef INSTANTIATE_MACRO
 

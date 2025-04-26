@@ -141,9 +141,9 @@ template <typename T>
 static inline T ImMaxArray(const T* values, int count) { T m = values[0]; for (int i = 1; i < count; ++i) { if (values[i] > m) { m = values[i]; } } return m; }
 // Finds the min and max value in an unsorted array
 template <typename T>
-static inline void ImMinMaxArray(const T* values, int count, T* min_out, T* max_out) {
+static inline void ImMinMaxArray(const T* values, int count, T* min_out, T* max_out, int stride = 1) {
     T Min = values[0]; T Max = values[0];
-    for (int i = 1; i < count; ++i) {
+    for (int i = 0; i < count; i += stride) {
         if (values[i] < Min) { Min = values[i]; }
         if (values[i] > Max) { Max = values[i]; }
     }
@@ -159,20 +159,20 @@ static inline T ImSum(const T* values, int count) {
 }
 // Finds the mean of an array
 template <typename T>
-static inline double ImMean(const T* values, int count) {
-    double den = 1.0 / count;
+static inline double ImMean(const T* values, int count, int stride = 1) {
+    double den = 1.0 / (count/stride);
     double mu  = 0;
-    for (int i = 0; i < count; ++i)
+    for (int i = 0; i < count; i += stride)
         mu += (double)values[i] * den;
     return mu;
 }
 // Finds the sample standard deviation of an array
 template <typename T>
-static inline double ImStdDev(const T* values, int count) {
-    double den = 1.0 / (count - 1.0);
-    double mu  = ImMean(values, count);
+static inline double ImStdDev(const T* values, int count, int stride = 1) {
+    double den = 1.0 / (count/stride - 1.0);
+    double mu  = ImMean(values, count, stride);
     double x   = 0;
-    for (int i = 0; i < count; ++i)
+    for (int i = 0; i < count; i += stride)
         x += ((double)values[i] - mu) * ((double)values[i] - mu) * den;
     return sqrt(x);
 }
@@ -1518,19 +1518,19 @@ void FillRange(ImVector<T>& buffer, int n, T vmin, T vmax) {
 
 // Calculate histogram bin counts and widths
 template <typename T>
-static inline void CalculateBins(const T* values, int count, ImPlotBin meth, const ImPlotRange& range, int& bins_out, double& width_out) {
+static inline void CalculateBins(const T* values, int count, ImPlotBin meth, const ImPlotRange& range, int& bins_out, double& width_out, int stride = 1) {
     switch (meth) {
         case ImPlotBin_Sqrt:
-            bins_out  = (int)ceil(sqrt(count));
+            bins_out  = (int)ceil(sqrt(count/stride));
             break;
         case ImPlotBin_Sturges:
-            bins_out  = (int)ceil(1.0 + log2(count));
+            bins_out  = (int)ceil(1.0 + log2(count/stride));
             break;
         case ImPlotBin_Rice:
-            bins_out  = (int)ceil(2 * cbrt(count));
+            bins_out  = (int)ceil(2 * cbrt(count/stride));
             break;
         case ImPlotBin_Scott:
-            width_out = 3.49 * ImStdDev(values, count) / cbrt(count);
+            width_out = 3.49 * ImStdDev(values, count, stride) / cbrt(count/stride);
             bins_out  = (int)round(range.Size() / width_out);
             break;
     }
